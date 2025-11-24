@@ -1,16 +1,18 @@
-// BrainSAIT RHDTE Directory App
-// Main entry point for the Healthcare Directory iOS App
+// Brainsait Maplinc - Healthcare Directory App
+// Main entry point for the Riyadh Healthcare Directory iOS App
 
 import SwiftUI
 
 @main
-struct RHDTEDirectoryApp: App {
+struct BrainsaitMaplincApp: App {
     @StateObject private var appState = AppState()
-    
+    @StateObject private var dataService = RiyadhHealthcareDataService()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
+                .environmentObject(dataService)
         }
     }
 }
@@ -57,38 +59,39 @@ class AppState: ObservableObject {
 // MARK: - Content View
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var dataService: RiyadhHealthcareDataService
     @State private var selectedTab = 0
-    
+
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Map Tab
-            MapTabView()
+            // Map Tab - Enhanced with Riyadh Healthcare Data
+            EnhancedMapView()
                 .tabItem {
                     Label("Map", systemImage: "map.fill")
                 }
                 .tag(0)
-            
-            // Directory Tab
-            DirectoryView()
+
+            // Directory Tab - Healthcare Facilities List
+            EnhancedDirectoryView()
                 .tabItem {
                     Label("Directory", systemImage: "list.bullet")
                 }
                 .tag(1)
-            
+
             // Saved Tab
             SavedFacilitiesView()
                 .tabItem {
                     Label("Saved", systemImage: "heart.fill")
                 }
                 .tag(2)
-            
-            // Dashboard Tab
-            DashboardView()
+
+            // Analytics Dashboard Tab
+            AnalyticsDashboardView()
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.fill")
+                    Label("Analytics", systemImage: "chart.bar.fill")
                 }
                 .tag(3)
-            
+
             // Profile Tab
             ProfileView()
                 .tabItem {
@@ -102,6 +105,10 @@ struct ContentView: View {
         }
         .sheet(item: $appState.selectedFacility) { facility in
             FacilityDetailSheet(facility: facility)
+        }
+        .onAppear {
+            // Load Riyadh healthcare data on launch
+            dataService.loadSampleRiyadhData()
         }
     }
 }
