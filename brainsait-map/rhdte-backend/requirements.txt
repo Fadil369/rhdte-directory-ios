@@ -16,7 +16,7 @@ googlemaps==4.10.0
 
 # HTTP Client
 httpx==0.25.2
-aiohttp==3.9.1
+aiohttp==3.12.14
 
 # Environment & Configuration
 python-dotenv==1.0.0
