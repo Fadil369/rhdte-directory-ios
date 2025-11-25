@@ -435,8 +435,37 @@
         </div>
     </div>
 
+    <!-- Data Source Config Modal -->
+    <div class="emergency-overlay" id="configModal" style="display: none;">
+        <div class="emergency-content" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); text-align: left;">
+            <div class="emergency-title" style="color: #0ea5e9; font-size: 1.5rem;">⚙️ Configure Data Source</div>
+            <p style="margin-bottom: 1.5rem; color: #94a3b8;">Connect this dashboard to your live BrainSAIT backend infrastructure.</p>
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #e2e8f0;">WebSocket / API URL</label>
+                <input type="text" id="apiEndpoint" placeholder="wss://api.brainsait.com/monitor or https://..." style="width: 100%; padding: 0.75rem; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px;">
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #e2e8f0;">API Key (Optional)</label>
+                <input type="password" id="apiKey" placeholder="sk_live_..." style="width: 100%; padding: 0.75rem; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px;">
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button onclick="closeConfigModal()" style="padding: 0.75rem 1.5rem; background: transparent; color: #94a3b8; border: 1px solid #334155; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button onclick="saveConfig()" style="padding: 0.75rem 1.5rem; background: var(--primary-blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Connect & Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Dashboard Header -->
     <header class="dashboard-header">
+        <div style="position: absolute; top: 1rem; left: 1rem;">
+            <button onclick="openConfigModal()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                <span>⚙️</span> Connect Data
+            </button>
+        </div>
+
         <h1 class="dashboard-title" id="mainTitle">🏥 BRAINSAIT Healthcare Infrastructure Monitor</h1>
         <p class="dashboard-subtitle" id="mainSubtitle">برينسايت - مراقب البنية التحتية الصحية المتقدم</p>
         
@@ -491,6 +520,39 @@
         let charts = {};
         let updateInterval;
         let websocket;
+        let customApiEndpoint = localStorage.getItem('brainsait_api_endpoint');
+        let customApiKey = localStorage.getItem('brainsait_api_key');
+
+        // Config Modal Functions
+        function openConfigModal() {
+            document.getElementById('configModal').style.display = 'flex';
+            if(customApiEndpoint) document.getElementById('apiEndpoint').value = customApiEndpoint;
+            if(customApiKey) document.getElementById('apiKey').value = customApiKey;
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').style.display = 'none';
+        }
+
+        function saveConfig() {
+            const endpoint = document.getElementById('apiEndpoint').value;
+            const key = document.getElementById('apiKey').value;
+            
+            if(endpoint) {
+                localStorage.setItem('brainsait_api_endpoint', endpoint);
+                localStorage.setItem('brainsait_api_key', key);
+                customApiEndpoint = endpoint;
+                customApiKey = key;
+                
+                // Restart connection
+                if(websocket) websocket.close();
+                if(updateInterval) clearInterval(updateInterval);
+                
+                alert('Configuration saved. Attempting to connect...');
+                initDashboard();
+                closeConfigModal();
+            }
+        }
 
         // Translation data
         const translations = {
@@ -562,11 +624,18 @@
 
         // WebSocket connection for real-time updates
         function connectWebSocket() {
+            const wsUrl = customApiEndpoint ? customApiEndpoint.replace('http', 'ws') : 'ws://localhost:8765';
+            
             try {
-                websocket = new WebSocket('ws://localhost:8765');
+                console.log(`Attempting connection to: ${wsUrl}`);
+                websocket = new WebSocket(wsUrl);
                 
                 websocket.onopen = function(event) {
                     console.log('🔌 WebSocket connected for real-time updates');
+                    // Authenticate if key exists
+                    if(customApiKey) {
+                        websocket.send(JSON.stringify({ type: 'auth', key: customApiKey }));
+                    }
                 };
                 
                 websocket.onmessage = function(event) {
@@ -580,11 +649,12 @@
                 
                 websocket.onclose = function(event) {
                     console.log('🔌 WebSocket disconnected, attempting reconnection...');
-                    setTimeout(connectWebSocket, 5000);
+                    // Only reconnect if it was a custom endpoint that might come back
+                    if(customApiEndpoint) setTimeout(connectWebSocket, 5000);
                 };
                 
                 websocket.onerror = function(error) {
-                    console.error('WebSocket error:', error);
+                    console.log('WebSocket error (using simulation fallback)');
                 };
                 
             } catch (e) {
@@ -611,7 +681,22 @@
         // Load initial dashboard data
         async function loadInitialData() {
             try {
-                // Simulate API calls to monitoring endpoints
+                // Try to fetch from real API if configured
+                if (customApiEndpoint && customApiEndpoint.startsWith('http')) {
+                    try {
+                        const headers = customApiKey ? { 'Authorization': `Bearer ${customApiKey}` } : {};
+                        const response = await fetch(`${customApiEndpoint}/health`, { headers });
+                        if (response.ok) {
+                            const realData = await response.json();
+                            updateDashboardGrid(realData);
+                            return;
+                        }
+                    } catch(e) {
+                        console.log('Failed to fetch from real API, falling back to simulation');
+                    }
+                }
+
+                // Fallback to simulation
                 const responses = await Promise.all([
                     fetchHealthMetrics(),
                     fetchAlerts(),
