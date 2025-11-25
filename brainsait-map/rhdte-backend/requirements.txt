@@ -1,0 +1,29 @@
+# BrainSAIT RHDTE - Python Dependencies
+# FastAPI Backend for Riyadh Health Digital Transformation Engine
+
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.2
+pydantic-settings>=2.0.0
+
+# Database
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+
+# Google Maps API
+googlemaps==4.10.0
+
+# HTTP Client
+httpx==0.25.2
+aiohttp==3.9.1
+
+# Environment & Configuration
+python-dotenv==1.0.0
+
+# PythonAnywhere WSGI Support
+asgiref>=3.7.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.23.2

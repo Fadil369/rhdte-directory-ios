@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 BRAINSAIT Healthcare Infrastructure Monitor | برينسايت - مراقب البنية التحتية الصحية</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.0/index.min.js"></script>
+    <style>
+        :root {
+            /* BRAINSAIT Healthcare Colors */
+            --primary-blue: #0ea5e9;
+            --primary-purple: #6366f1;
+            --success-green: #00e676;
+            --warning-orange: #f59e0b;
+            --error-red: #ef4444;
+            --neutral-gray: #64748b;
+            
+            /* Healthcare Gradients */
+            --gradient-primary: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+            --gradient-success: linear-gradient(135deg, #00e676 0%, #00b4d8 100%);
+            --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+            --gradient-error: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            
+            /* Neural Network Effects */
+            --neural-glow: 0 0 20px rgba(14, 165, 233, 0.3);
+            --neural-pulse: 0 0 40px rgba(99, 102, 241, 0.5);
+            
+            /* Arabic Font Support */
+            --font-arabic: 'Segoe UI', 'Tahoma', 'Arial Unicode MS', sans-serif;
+            --font-english: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-english);
+            background: linear-gradient(135deg, #0f1419 0%, #1a202c 50%, #2d3748 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+
+        /* Arabic Language Support */
+        .rtl {
+            direction: rtl;
+            text-align: right;
+            font-family: var(--font-arabic);
+        }
+
+        /* Neural Glass Morphism Effects */
+        .neural-card {
+            background: linear-gradient(145deg, 
+                rgba(255, 255, 255, 0.05) 0%, 
+                rgba(255, 255, 255, 0.02) 100%);
+            backdrop-filter: blur(16px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .neural-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--neural-glow);
+            border-color: rgba(14, 165, 233, 0.3);
+        }
+
+        /* Header */
+        .dashboard-header {
+            padding: 2rem;
+            text-align: center;
+            background: var(--gradient-primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .dashboard-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .dashboard-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-family: var(--font-arabic);
+        }
+
+        .system-status {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-dot.healthy { background-color: var(--success-green); }
+        .status-dot.warning { background-color: var(--warning-orange); }
+        .status-dot.error { background-color: var(--error-red); }
+        .status-dot.unknown { background-color: var(--neutral-gray); }
+
+        /* Main Dashboard */
+        .dashboard-container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Service Cards */
+        .service-card {
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+        }
+
+        .service-card.healthy::before { background: var(--gradient-success); }
+        .service-card.warning::before { background: var(--gradient-warning); }
+        .service-card.error::before { background: var(--gradient-error); }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .service-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: var(--gradient-primary);
+        }
+
+        .service-info h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+            color: #f1f5f9;
+        }
+
+        .service-info p {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--success-green);
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value.warning { color: var(--warning-orange); }
+        .metric-value.error { color: var(--error-red); }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        /* Real-time Updates */
+        .last-updated {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        /* Alert Panel */
+        .alerts-panel {
+            grid-column: 1 / -1;
+            padding: 1.5rem;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border-left: 4px solid var(--warning-orange);
+        }
+
+        .alert-item.critical { border-left-color: var(--error-red); }
+        .alert-item.high { border-left-color: var(--warning-orange); }
+        .alert-item.medium { border-left-color: var(--primary-blue); }
+        .alert-item.low { border-left-color: var(--success-green); }
+
+        .alert-icon {
+            font-size: 24px;
+            width: 40px;
+            text-align: center;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: #f1f5f9;
+        }
+
+        .alert-message {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 0.25rem;
+        }
+
+        .alert-time {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* Loading States */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(14, 165, 233, 0.3);
+            border-top: 3px solid var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+        }
+
+        .neural-pulse {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .system-status {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Healthcare Compliance Indicators */
+        .compliance-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success-green);
+        }
+
+        .compliance-indicator.non-compliant {
+            background: var(--error-red);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        /* Arabic Language Toggle */
+        .language-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 0.5rem 1rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .language-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Emergency Alert Overlay */
+        .emergency-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(239, 68, 68, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(8px);
+        }
+
+        .emergency-content {
+            background: white;
+            color: #1a202c;
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .emergency-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--error-red);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Language Toggle -->
+    <button class="language-toggle" onclick="toggleLanguage()" id="langToggle">
+        🌐 العربية
+    </button>
+
+    <!-- Emergency Alert Overlay -->
+    <div class="emergency-overlay" id="emergencyOverlay">
+        <div class="emergency-content">
+            <div class="emergency-title">🚨 CRITICAL HEALTHCARE ALERT</div>
+            <div id="emergencyMessage">System critical failure detected. Patient safety protocols activated.</div>
+            <button onclick="acknowledgeEmergency()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: var(--error-red); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                Acknowledge & Take Action
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard Header -->
+    <header class="dashboard-header">
+        <h1 class="dashboard-title" id="mainTitle">🏥 BRAINSAIT Healthcare Infrastructure Monitor</h1>
+        <p class="dashboard-subtitle" id="mainSubtitle">برينسايت - مراقب البنية التحتية الصحية المتقدم</p>
+        
+        <div class="system-status">
+            <div class="status-indicator">
+                <div class="status-dot healthy" id="overallStatus"></div>
+                <span id="overallStatusText">System Healthy</span>
+            </div>
+            <div class="status-indicator">
+                <span>🔄</span>
+                <span id="lastUpdateTime">Last Update: --:--:--</span>
+            </div>
+            <div class="status-indicator">
+                <span>📊</span>
+                <span id="monitoredServices">Services: 0</span>
+            </div>
+            <div class="status-indicator">
+                <span>🏥</span>
+                <span id="nphiesStatus">NPHIES: Checking...</span>
+            </div>
+            <a href="https://calllinc-healthcare-ai-agent-469357002740.us-west1.run.app/" target="_blank" class="status-indicator" style="text-decoration: none; color: white; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); cursor: pointer; border: 1px solid rgba(255,255,255,0.2);">
+                <span>🤖</span>
+                <span>Live AI Agent</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Dashboard Container -->
+    <main class="dashboard-container">
+        <div class="dashboard-grid" id="dashboardGrid">
+            <!-- Dynamic service cards will be inserted here -->
+        </div>
+
+        <!-- Alerts Panel -->
+        <div class="neural-card alerts-panel">
+            <h2 style="margin-bottom: 1rem; color: #f1f5f9; display: flex; align-items: center; gap: 0.5rem;">
+                🚨 <span id="alertsTitle">Active Healthcare Alerts</span>
+            </h2>
+            <div id="alertsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading alerts...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Global state
+        let currentLanguage = 'en';
+        let dashboardData = {};
+        let charts = {};
+        let updateInterval;
+        let websocket;
+
+        // Translation data
+        const translations = {
+            en: {
+                mainTitle: "🏥 BRAINSAIT Healthcare Infrastructure Monitor",
+                mainSubtitle: "Advanced Healthcare Infrastructure Monitoring & Analytics",
+                systemHealthy: "System Healthy",
+                systemWarning: "System Warning",
+                systemCritical: "System Critical",
+                servicesLabel: "Services",
+                lastUpdate: "Last Update",
+                alertsTitle: "Active Healthcare Alerts",
+                responseTime: "Response Time",
+                cpuUsage: "CPU Usage",
+                memoryUsage: "Memory Usage",
+                uptime: "Uptime",
+                errorRate: "Error Rate",
+                compliance: "Compliance",
+                loading: "Loading...",
+                noData: "No data available",
+                reconnecting: "Reconnecting...",
+                oidTree: "OID Tree Component",
+                nphiesGateway: "NPHIES Gateway",
+                clinicalAPI: "Clinical API",
+                database: "Database",
+                neuralAI: "Neural AI Engine"
+            },
+            ar: {
+                mainTitle: "🏥 برينسايت - مراقب البنية التحتية الصحية",
+                mainSubtitle: "مراقبة وتحليل البنية التحتية الصحية المتقدمة",
+                systemHealthy: "النظام سليم",
+                systemWarning: "تحذير النظام",
+                systemCritical: "حالة طوارئ",
+                servicesLabel: "الخدمات",
+                lastUpdate: "آخر تحديث",
+                alertsTitle: "التنبيهات الصحية النشطة",
+                responseTime: "وقت الاستجابة",
+                cpuUsage: "استخدام المعالج",
+                memoryUsage: "استخدام الذاكرة",
+                uptime: "وقت التشغيل",
+                errorRate: "معدل الأخطاء",
+                compliance: "الامتثال",
+                loading: "جارٍ التحميل...",
+                noData: "لا توجد بيانات متاحة",
+                reconnecting: "إعادة الاتصال...",
+                oidTree: "مكون شجرة المعرفات",
+                nphiesGateway: "بوابة نفيس",
+                clinicalAPI: "واجهة برمجة التطبيقات السريرية",
+                database: "قاعدة البيانات",
+                neuralAI: "محرك الذكاء العصبي"
+            }
+        };
+
+        // Initialize dashboard
+        function initDashboard() {
+            console.log('🏥 Initializing BRAINSAIT Healthcare Dashboard...');
+            
+            // Connect to WebSocket for real-time updates
+            connectWebSocket();
+            
+            // Load initial data
+            loadInitialData();
+            
+            // Set update interval
+            updateInterval = setInterval(updateDashboard, 30000); // Update every 30 seconds
+            
+            console.log('✅ Dashboard initialized successfully');
+        }
+
+        // WebSocket connection for real-time updates
+        function connectWebSocket() {
+            try {
+                websocket = new WebSocket('ws://localhost:8765');
+                
+                websocket.onopen = function(event) {
+                    console.log('🔌 WebSocket connected for real-time updates');
+                };
+                
+                websocket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleRealTimeUpdate(data);
+                    } catch (e) {
+                        console.error('Error parsing WebSocket message:', e);
+                    }
+                };
+                
+                websocket.onclose = function(event) {
+                    console.log('🔌 WebSocket disconnected, attempting reconnection...');
+                    setTimeout(connectWebSocket, 5000);
+                };
+                
+                websocket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+                
+            } catch (e) {
+                console.log('WebSocket not available, using polling updates');
+            }
+        }
+
+        // Handle real-time updates
+        function handleRealTimeUpdate(data) {
+            if (data.type === 'healthcare_alert') {
+                addAlert(data);
+                
+                // Check for critical alerts
+                if (data.severity === 'CRITICAL' && data.patient_impact) {
+                    showEmergencyOverlay(data);
+                }
+            } else if (data.type === 'service_health') {
+                updateServiceCard(data);
+            } else if (data.type === 'system_metrics') {
+                updateSystemMetrics(data);
+            }
+        }
+
+        // Load initial dashboard data
+        async function loadInitialData() {
+            try {
+                // Simulate API calls to monitoring endpoints
+                const responses = await Promise.all([
+                    fetchHealthMetrics(),
+                    fetchAlerts(),
+                    fetchSystemStatus()
+                ]);
+                
+                const [healthMetrics, alerts, systemStatus] = responses;
+                
+                updateDashboardGrid(healthMetrics);
+                updateAlertsPanel(alerts);
+                updateSystemStatus(systemStatus);
+                
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+                showErrorState();
+            }
+        }
+
+        // Fetch health metrics (simulated)
+        async function fetchHealthMetrics() {
+            // In a real implementation, this would fetch from your monitoring API
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        services: [
+                            {
+                                name: 'oid_tree',
+                                displayName: translations[currentLanguage].oidTree,
+                                status: 'healthy',
+                                icon: '🌳',
+                                metrics: {
+                                    responseTime: 145,
+                                    cpuUsage: 23.5,
+                                    memoryUsage: 256,
+                                    uptime: 99.9,
+                                    errorRate: 0.1,
+                                    compliance: 98
+                                },
+                                arabicSupport: true,
+                                neuralAI: true
+                            },
+                            {
+                                name: 'nphies_gateway',
+                                displayName: translations[currentLanguage].nphiesGateway,
+                                status: 'healthy',
+                                icon: '🏥',
+                                metrics: {
+                                    responseTime: 890,
+                                    cpuUsage: 45.2,
+                                    memoryUsage: 512,
+                                    uptime: 99.7,
+                                    errorRate: 0.3,
+                                    compliance: 99
+                                },
+                                arabicSupport: true,
+                                nphiesIntegrated: true
+                            },
+                            {
+                                name: 'clinical_api',
+                                displayName: translations[currentLanguage].clinicalAPI,
+                                status: 'warning',
+                                icon: '⚕️',
+                                metrics: {
+                                    responseTime: 2340,
+                                    cpuUsage: 78.1,
+                                    memoryUsage: 1024,
+                                    uptime: 98.2,
+                                    errorRate: 2.1,
+                                    compliance: 95
+                                }
+                            },
+                            {
+                                name: 'database',
+                                displayName: translations[currentLanguage].database,
+                                status: 'healthy',
+                                icon: '🗄️',
+                                metrics: {
+                                    responseTime: 45,
+                                    cpuUsage: 35.8,
+                                    memoryUsage: 2048,
+                                    uptime: 99.95,
+                                    errorRate: 0.05,
+                                    compliance: 100
+                                }
+                            },
+                            {
+                                name: 'neural_ai',
+                                displayName: translations[currentLanguage].neuralAI,
+                                status: 'healthy',
+                                icon: '🧠',
+                                metrics: {
+                                    responseTime: 678,
+                                    cpuUsage: 65.4,
+                                    memoryUsage: 1536,
+                                    uptime: 99.3,
+                                    errorRate: 0.8,
+                                    compliance: 97
+                                },
+                                aiPowered: true,
+                                neuralProcessing: true
+                            }
+                        ]
+                    });
+                }, 1000);
+            });
+        }
+
+        // Fetch alerts (simulated)
+        async function fetchAlerts() {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve([
+                        {
+                            id: 'alert_001',
+                            severity: 'HIGH',
+                            category: 'performance',
+                            title: 'High Response Time Detected',
+                            message: 'Clinical API response time exceeds 2 seconds threshold',
+                            arabic_message: 'تم اكتشاف وقت استجابة عالي في واجهة برمجة التطبيقات السريرية',
+                            component: 'clinical_api',
+                            timestamp: new Date(Date.now() - 300000), // 5 minutes ago
+                            patient_impact: false,
+                            compliance_related: false
+                        },
+                        {
+                            id: 'alert_002',
+                            severity: 'MEDIUM',
+                            category: 'system_health',
+                            title: 'Memory Usage Above Normal',
+                            message: 'Clinical API memory usage is at 78% capacity',
+                            arabic_message: 'استخدام الذاكرة في واجهة برمجة التطبيقات السريرية مرتفع',
+                            component: 'clinical_api',
+                            timestamp: new Date(Date.now() - 600000), // 10 minutes ago
+                            patient_impact: false,
+                            compliance_related: false
+                        }
+                    ]);
+                }, 500);
+            });
+        }
+
+        // Fetch system status (simulated)
+        async function fetchSystemStatus() {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve({
+                        overall_status: 'healthy',
+                        total_services: 5,
+                        healthy_services: 4,
+                        warning_services: 1,
+                        critical_services: 0,
+                        nphies_status: 'connected',
+                        compliance_score: 97.8,
+                        last_updated: new Date()
+                    });
+                }, 300);
+            });
+        }
+
+        // Update dashboard grid with service cards
+        function updateDashboardGrid(data) {
+            const grid = document.getElementById('dashboardGrid');
+            
+            grid.innerHTML = data.services.map(service => createServiceCard(service)).join('');
+            
+            // Initialize charts for each service
+            data.services.forEach(service => {
+                setTimeout(() => createChart(service.name, service.metrics), 100);
+            });
+        }
+
+        // Create service card HTML
+        function createServiceCard(service) {
+            const statusClass = service.status;
+            const t = translations[currentLanguage];
+            
+            return `
+                <div class="neural-card service-card ${statusClass}" id="service-${service.name}">
+                    <div class="compliance-indicator ${service.metrics.compliance < 95 ? 'non-compliant' : ''}"></div>
+                    
+                    <div class="service-header">
+                        <div class="service-icon">
+                            ${service.icon}
+                        </div>
+                        <div class="service-info">
+                            <h3>${service.displayName}</h3>
+                            <p>${service.name}</p>
+                        </div>
+                        <div style="margin-left: auto;">
+                            ${service.arabicSupport ? '<span title="Arabic RTL Support">🌍</span>' : ''}
+                            ${service.neuralAI ? '<span title="Neural AI Powered">🧠</span>' : ''}
+                            ${service.nphiesIntegrated ? '<span title="NPHIES Integrated">🏥</span>' : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-value ${service.metrics.responseTime > 2000 ? 'error' : service.metrics.responseTime > 1000 ? 'warning' : ''}">
+                                ${service.metrics.responseTime}ms
+                            </div>
+                            <div class="metric-label">${t.responseTime}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value ${service.metrics.cpuUsage > 80 ? 'error' : service.metrics.cpuUsage > 60 ? 'warning' : ''}">
+                                ${service.metrics.cpuUsage}%
+                            </div>
+                            <div class="metric-label">${t.cpuUsage}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value ${service.metrics.memoryUsage > 2000 ? 'error' : service.metrics.memoryUsage > 1000 ? 'warning' : ''}">
+                                ${service.metrics.memoryUsage}MB
+                            </div>
+                            <div class="metric-label">${t.memoryUsage}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value ${service.metrics.uptime < 99 ? 'error' : service.metrics.uptime < 99.5 ? 'warning' : ''}">
+                                ${service.metrics.uptime}%
+                            </div>
+                            <div class="metric-label">${t.uptime}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="chart-${service.name}"></canvas>
+                    </div>
+                    
+                    <div class="last-updated">
+                        ${t.lastUpdate}: ${new Date().toLocaleTimeString()}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Create performance chart for service
+        function createChart(serviceName, metrics) {
+            const ctx = document.getElementById(`chart-${serviceName}`);
+            if (!ctx) return;
+            
+            // Generate sample historical data
+            const timeLabels = [];
+            const responseData = [];
+            const cpuData = [];
+            
+            for (let i = 29; i >= 0; i--) {
+                const time = new Date(Date.now() - i * 60000); // Last 30 minutes
+                timeLabels.push(time.toLocaleTimeString());
+                
+                // Generate realistic variations around current metrics
+                responseData.push(metrics.responseTime + (Math.random() - 0.5) * metrics.responseTime * 0.3);
+                cpuData.push(metrics.cpuUsage + (Math.random() - 0.5) * 20);
+            }
+            
+            charts[serviceName] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: responseData,
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'CPU Usage (%)',
+                        data: cpuData,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#e2e8f0',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                maxTicksLimit: 6
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: {
+                                color: '#0ea5e9'
+                            },
+                            grid: {
+                                color: 'rgba(14, 165, 233, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: {
+                                color: '#6366f1'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        // Update alerts panel
+        function updateAlertsPanel(alerts) {
+            const container = document.getElementById('alertsContainer');
+            
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #64748b;">
+                        ✅ <span style="margin-left: 0.5rem;">${translations[currentLanguage].noData || 'No active alerts'}</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = alerts.map(alert => createAlertItem(alert)).join('');
+        }
+
+        // Create alert item HTML
+        function createAlertItem(alert) {
+            const severityIcons = {
+                'CRITICAL': '🚨',
+                'HIGH': '⚠️',
+                'MEDIUM': '📊',
+                'LOW': 'ℹ️',
+                'INFO': '💬'
+            };
+            
+            const timeAgo = getTimeAgo(alert.timestamp);
+            const message = currentLanguage === 'ar' && alert.arabic_message ? alert.arabic_message : alert.message;
+            
+            return `
+                <div class="alert-item ${alert.severity.toLowerCase()}" data-alert-id="${alert.id}">
+                    <div class="alert-icon">
+                        ${severityIcons[alert.severity] || '🔔'}
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-title">${alert.title}</div>
+                        <div class="alert-message">${message}</div>
+                        <div class="alert-time">
+                            ${alert.component} • ${timeAgo}
+                            ${alert.patient_impact ? ' • 👥 Patient Impact' : ''}
+                            ${alert.compliance_related ? ' • 📋 Compliance' : ''}
+                        </div>
+                    </div>
+                    <button onclick="acknowledgeAlert('${alert.id}')" style="padding: 0.5rem; background: rgba(255, 255, 255, 0.1); border: none; border-radius: 8px; color: #e2e8f0; cursor: pointer;">
+                        ✅ ACK
+                    </button>
+                </div>
+            `;
+        }
+
+        // Update system status indicators
+        function updateSystemStatus(status) {
+            const overallStatusElement = document.getElementById('overallStatus');
+            const overallStatusTextElement = document.getElementById('overallStatusText');
+            const monitoredServicesElement = document.getElementById('monitoredServices');
+            const nphiesStatusElement = document.getElementById('nphiesStatus');
+            const lastUpdateTimeElement = document.getElementById('lastUpdateTime');
+            
+            // Update overall status
+            overallStatusElement.className = `status-dot ${status.overall_status}`;
+            overallStatusTextElement.textContent = translations[currentLanguage][`system${status.overall_status.charAt(0).toUpperCase() + status.overall_status.slice(1)}`] || status.overall_status;
+            
+            // Update service count
+            monitoredServicesElement.textContent = `${translations[currentLanguage].servicesLabel}: ${status.total_services}`;
+            
+            // Update NPHIES status
+            nphiesStatusElement.textContent = `NPHIES: ${status.nphies_status}`;
+            
+            // Update last update time
+            lastUpdateTimeElement.textContent = `${translations[currentLanguage].lastUpdate}: ${status.last_updated.toLocaleTimeString()}`;
+        }
+
+        // Update dashboard (periodic refresh)
+        async function updateDashboard() {
+            try {
+                const data = await fetchHealthMetrics();
+                
+                // Update existing service cards
+                data.services.forEach(service => {
+                    updateServiceCard(service);
+                    updateChart(service.name, service.metrics);
+                });
+                
+                // Update system status
+                const systemStatus = await fetchSystemStatus();
+                updateSystemStatus(systemStatus);
+                
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            }
+        }
+
+        // Update individual service card
+        function updateServiceCard(service) {
+            const card = document.getElementById(`service-${service.name}`);
+            if (!card) return;
+            
+            // Update status class
+            card.className = `neural-card service-card ${service.status}`;
+            
+            // Update metrics
+            const metrics = card.querySelectorAll('.metric-value');
+            if (metrics.length >= 4) {
+                metrics[0].textContent = `${service.metrics.responseTime}ms`;
+                metrics[0].className = `metric-value ${service.metrics.responseTime > 2000 ? 'error' : service.metrics.responseTime > 1000 ? 'warning' : ''}`;
+                
+                metrics[1].textContent = `${service.metrics.cpuUsage}%`;
+                metrics[1].className = `metric-value ${service.metrics.cpuUsage > 80 ? 'error' : service.metrics.cpuUsage > 60 ? 'warning' : ''}`;
+                
+                metrics[2].textContent = `${service.metrics.memoryUsage}MB`;
+                metrics[2].className = `metric-value ${service.metrics.memoryUsage > 2000 ? 'error' : service.metrics.memoryUsage > 1000 ? 'warning' : ''}`;
+                
+                metrics[3].textContent = `${service.metrics.uptime}%`;
+                metrics[3].className = `metric-value ${service.metrics.uptime < 99 ? 'error' : service.metrics.uptime < 99.5 ? 'warning' : ''}`;
+            }
+            
+            // Update last updated time
+            const lastUpdated = card.querySelector('.last-updated');
+            if (lastUpdated) {
+                lastUpdated.textContent = `${translations[currentLanguage].lastUpdate}: ${new Date().toLocaleTimeString()}`;
+            }
+        }
+
+        // Update chart with new data
+        function updateChart(serviceName, metrics) {
+            const chart = charts[serviceName];
+            if (!chart) return;
+            
+            // Add new data point
+            const now = new Date();
+            chart.data.labels.push(now.toLocaleTimeString());
+            chart.data.datasets[0].data.push(metrics.responseTime + (Math.random() - 0.5) * metrics.responseTime * 0.3);
+            chart.data.datasets[1].data.push(metrics.cpuUsage + (Math.random() - 0.5) * 20);
+            
+            // Keep only last 30 data points
+            if (chart.data.labels.length > 30) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+            }
+            
+            chart.update('none');
+        }
+
+        // Language toggle functionality
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'en' ? 'ar' : 'en';
+            
+            const body = document.body;
+            const langToggle = document.getElementById('langToggle');
+            
+            if (currentLanguage === 'ar') {
+                body.classList.add('rtl');
+                langToggle.textContent = '🌐 English';
+            } else {
+                body.classList.remove('rtl');
+                langToggle.textContent = '🌐 العربية';
+            }
+            
+            // Update all text content
+            updateLanguageContent();
+        }
+
+        // Update content for current language
+        function updateLanguageContent() {
+            const t = translations[currentLanguage];
+            
+            document.getElementById('mainTitle').textContent = t.mainTitle;
+            document.getElementById('mainSubtitle').textContent = t.mainSubtitle;
+            document.getElementById('alertsTitle').textContent = t.alertsTitle;
+            
+            // Reload dashboard with new language
+            loadInitialData();
+        }
+
+        // Utility functions
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const diff = now - new Date(timestamp);
+            const minutes = Math.floor(diff / 60000);
+            
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        function acknowledgeAlert(alertId) {
+            console.log(`Acknowledging alert: ${alertId}`);
+            
+            // Remove alert from display
+            const alertElement = document.querySelector(`[data-alert-id="${alertId}"]`);
+            if (alertElement) {
+                alertElement.style.opacity = '0.5';
+                alertElement.style.pointerEvents = 'none';
+                
+                // In a real implementation, this would call your API
+                setTimeout(() => {
+                    alertElement.remove();
+                }, 1000);
+            }
+        }
+
+        function addAlert(alert) {
+            const container = document.getElementById('alertsContainer');
+            const alertHTML = createAlertItem(alert);
+            
+            container.insertAdjacentHTML('afterbegin', alertHTML);
+            
+            // Remove old alerts if too many
+            const alerts = container.querySelectorAll('.alert-item');
+            if (alerts.length > 10) {
+                alerts[alerts.length - 1].remove();
+            }
+        }
+
+        function showEmergencyOverlay(alert) {
+            const overlay = document.getElementById('emergencyOverlay');
+            const message = document.getElementById('emergencyMessage');
+            
+            message.textContent = alert.message;
+            overlay.style.display = 'flex';
+            
+            // Auto-hide after 30 seconds if not acknowledged
+            setTimeout(() => {
+                if (overlay.style.display === 'flex') {
+                    overlay.style.display = 'none';
+                }
+            }, 30000);
+        }
+
+        function acknowledgeEmergency() {
+            document.getElementById('emergencyOverlay').style.display = 'none';
+            console.log('Emergency alert acknowledged');
+        }
+
+        function showErrorState() {
+            const grid = document.getElementById('dashboardGrid');
+            grid.innerHTML = `
+                <div class="neural-card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                    <h2 style="margin-bottom: 1rem; color: #f1f5f9;">Connection Error</h2>
+                    <p style="color: #94a3b8; margin-bottom: 2rem;">
+                        Unable to connect to monitoring services. Attempting to reconnect...
+                    </p>
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        ${translations[currentLanguage].reconnecting}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (updateInterval) clearInterval(updateInterval);
+            if (websocket) websocket.close();
+        });
+
+        // Handle visibility change (pause updates when tab is hidden)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (updateInterval) clearInterval(updateInterval);
+            } else {
+                updateInterval = setInterval(updateDashboard, 30000);
+                updateDashboard(); // Immediate update when tab becomes visible
+            }
+        });
+    </script>
+</body>
+</html>
