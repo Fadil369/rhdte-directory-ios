@@ -24,6 +24,15 @@
     <key>NSContactsUsageDescription</key>
     <string>We need access to your contacts to quickly share healthcare information with family members.</string>
     
+    <key>NSHealthShareUsageDescription</key>
+    <string>BrainSAIT needs to read your health data to provide personalized healthcare recommendations and track your wellness progress.</string>
+    
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>BrainSAIT needs to write health data to save information from your medical appointments and sync with Epic FHIR records.</string>
+    
+    <key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
+    <string>BrainSAIT needs access to your clinical health records to provide comprehensive care coordination and integrate with Epic health systems.</string>
+    
     <!-- App Transport Security -->
     <key>NSAppTransportSecurity</key>
     <dict>
@@ -59,6 +68,22 @@
         <string>voip</string>
         <string>remote-notification</string>
         <string>fetch</string>
+        <string>processing</string>
+    </array>
+    
+    <!-- URL Schemes for Epic OAuth -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLName</key>
+            <string>com.brainsait.health</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>brainsait-health</string>
+            </array>
+        </dict>
     </array>
     
     <!-- Supported Languages -->

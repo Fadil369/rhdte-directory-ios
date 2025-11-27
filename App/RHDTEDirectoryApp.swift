@@ -75,26 +75,40 @@ struct ContentView: View {
                 }
                 .tag(1)
             
+            // AI Triage Tab
+            VoiceTriageView()
+                .tabItem {
+                    Label("AI Triage", systemImage: "waveform.circle.fill")
+                }
+                .tag(2)
+            
+            // Health Records Tab
+            HealthRecordsView()
+                .tabItem {
+                    Label("Health", systemImage: "heart.text.square.fill")
+                }
+                .tag(3)
+            
             // Saved Tab
             SavedFacilitiesView()
                 .tabItem {
                     Label("Saved", systemImage: "heart.fill")
                 }
-                .tag(2)
+                .tag(4)
             
             // Dashboard Tab
             DashboardView()
                 .tabItem {
                     Label("Dashboard", systemImage: "chart.bar.fill")
                 }
-                .tag(3)
+                .tag(5)
             
             // Profile Tab
             ProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person.fill")
                 }
-                .tag(4)
+                .tag(6)
         }
         .tint(Color("BrainSAITGreen"))
         .sheet(isPresented: $appState.showLeadMagnet) {
