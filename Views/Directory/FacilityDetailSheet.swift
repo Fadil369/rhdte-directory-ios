@@ -3,6 +3,9 @@
 
 import SwiftUI
 import MapKit
+import os.log
+
+private let logger = Logger(subsystem: "com.brainsait.rhdte-directory", category: "FacilityDetail")
 
 struct FacilityDetailSheet: View {
     let facility: Facility
@@ -10,6 +13,8 @@ struct FacilityDetailSheet: View {
     @Environment(\.dismiss) var dismiss
     @State private var showBooking = false
     @State private var showDirections = false
+    @State private var showHealthVault = false
+    @StateObject private var featureFlags = FeatureFlagsService.shared
     
     var body: some View {
         NavigationStack {
@@ -217,9 +222,6 @@ struct FacilityDetailSheet: View {
     }
     
     // MARK: - Phase 2 Features Section
-    
-    @State private var showHealthVault = false
-    @StateObject private var featureFlags = FeatureFlagsService.shared
     
     private var phase2FeaturesSection: some View {
         VStack(alignment: .leading, spacing: 12) {

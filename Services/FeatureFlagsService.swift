@@ -3,6 +3,10 @@
 
 import Foundation
 import Combine
+import UIKit
+import os.log
+
+private let logger = Logger(subsystem: "com.brainsait.rhdte-directory", category: "FeatureFlags")
 
 /// Service for managing feature flags from DoctorHub
 class FeatureFlagsService: ObservableObject {
@@ -72,7 +76,7 @@ class FeatureFlagsService: ObservableObject {
             
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
-                print("⚠️ Failed to fetch feature flags, using cached values")
+                logger.warning("Failed to fetch feature flags, using cached values")
                 return
             }
             
@@ -87,10 +91,10 @@ class FeatureFlagsService: ObservableObject {
             // Cache the flags
             cacheFlags(data)
             
-            print("✅ Loaded \(flags.count) feature flags")
+            logger.info("Loaded \(self.flags.count) feature flags")
             
         } catch {
-            print("❌ Error fetching feature flags: \(error.localizedDescription)")
+            logger.error("Error fetching feature flags: \(error.localizedDescription)")
             // Use cached values if available
         }
     }
@@ -119,7 +123,7 @@ class FeatureFlagsService: ObservableObject {
             let config = try decoder.decode(FeatureFlagsConfig.self, from: data)
             flags = config.flags
             isLoaded = true
-            print("✅ Loaded feature flags from cache")
+            logger.info("Loaded feature flags from cache")
         } catch {
             loadDefaultFlags()
         }
@@ -170,7 +174,7 @@ class FeatureFlagsService: ObservableObject {
             )
         ]
         isLoaded = true
-        print("⚠️ Loaded default feature flags")
+        logger.warning("Loaded default feature flags")
     }
     
     // MARK: - Version Comparison
@@ -224,12 +228,13 @@ struct FeatureFlag: Codable {
     var isEnabledForCurrentUser: Bool {
         guard enabled else { return false }
         
-        // Check rollout percentage
-        // For deterministic rollout, use user ID hash
+        // Check rollout percentage using deterministic hash based on device ID
+        // This ensures consistent behavior for the same device across app launches
         if rolloutPercentage < 100 {
-            // TODO: Use actual user ID for rollout determination
-            let randomValue = Int.random(in: 1...100)
-            if randomValue > rolloutPercentage {
+            let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+            let hashValue = abs(deviceId.hashValue)
+            let bucketValue = hashValue % 100
+            if bucketValue >= rolloutPercentage {
                 return false
             }
         }

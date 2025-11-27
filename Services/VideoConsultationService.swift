@@ -3,6 +3,9 @@
 
 import Foundation
 import Combine
+import os.log
+
+private let logger = Logger(subsystem: "com.brainsait.rhdte-directory", category: "VideoConsultation")
 
 /// Service for managing video consultations with DoctorHub
 class VideoConsultationService: ObservableObject {
@@ -152,17 +155,17 @@ class VideoConsultationService: ObservableObject {
     
     func toggleAudio(muted: Bool) {
         // TODO: Implement WebRTC audio mute
-        print("Audio muted: \(muted)")
+        logger.debug("Audio muted: \(muted)")
     }
     
     func toggleVideo(enabled: Bool) {
         // TODO: Implement WebRTC video toggle
-        print("Video enabled: \(enabled)")
+        logger.debug("Video enabled: \(enabled)")
     }
     
     func switchCamera() {
         // TODO: Implement camera switching
-        print("Camera switched")
+        logger.debug("Camera switched")
     }
     
     // MARK: - WebSocket Connection
@@ -203,12 +206,12 @@ class VideoConsultationService: ObservableObject {
     
     private func handleWebSocketMessage(_ text: String) {
         // TODO: Handle signaling messages
-        print("WebSocket message: \(text)")
+        logger.debug("WebSocket message: \(text)")
     }
     
     private func handleWebSocketData(_ data: Data) {
         // TODO: Handle binary data
-        print("WebSocket data: \(data.count) bytes")
+        logger.debug("WebSocket data: \(data.count) bytes")
     }
     
     private func disconnectWebSocket() {

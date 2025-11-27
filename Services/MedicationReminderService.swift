@@ -4,6 +4,9 @@
 import Foundation
 import Combine
 import UserNotifications
+import os.log
+
+private let logger = Logger(subsystem: "com.brainsait.rhdte-directory", category: "MedicationReminder")
 
 /// Service for managing medication reminders with DoctorHub
 class MedicationReminderService: ObservableObject {
@@ -129,7 +132,7 @@ class MedicationReminderService: ObservableObject {
             
             return granted
         } catch {
-            print("❌ Failed to request notification permissions: \(error)")
+            logger.error("Failed to request notification permissions: \(error.localizedDescription)")
             return false
         }
     }
@@ -322,7 +325,7 @@ class MedicationReminderService: ObservableObject {
         
         // Process reminder notification
         if let reminderId = doctorHubData["reminder_id"] as? String {
-            print("📍 Received reminder notification for: \(reminderId)")
+            logger.debug("Received reminder notification for: \(reminderId)")
             // TODO: Update local state
         }
     }
@@ -338,7 +341,7 @@ class MedicationReminderService: ObservableObject {
                 try? await snoozeReminder(reminderId: reminderId, until: snoozeUntil)
             case .skip:
                 // Just dismiss, log the skip
-                print("User skipped reminder: \(reminderId)")
+                logger.debug("User skipped reminder: \(reminderId)")
             }
         }
     }
