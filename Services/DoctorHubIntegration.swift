@@ -1,19 +1,38 @@
 import Foundation
 
+/// DoctorHubService manages doctor appointments, availability, and bookings
+/// Integrates with the BrainSAIT Doctor Hub API for real-time scheduling
+///
+/// ## Features:
+/// - Doctor profile management
+/// - Real-time availability checking
+/// - Appointment booking and management
+/// - Insurance claim submission
+/// - NPHIES integration for Saudi health insurance
 class DoctorHubService: ObservableObject {
     static let shared = DoctorHubService()
-    
+
     @Published var appointments: [Appointment] = []
     @Published var doctors: [Doctor] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    
-    private let doctorHubBaseURL = "https://brainsait-doctor-hub--fadil369.github.app/api"
+
     private let session: URLSession
-    
+
     private init() {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForRequest = Configuration.Settings.networkTimeout
+        config.timeoutIntervalForResource = Configuration.Settings.networkTimeout * 2
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData // Always fetch fresh appointment data
+
+        // 🔒 SECURITY: Add authentication headers
+        if let apiKey = Configuration.Secrets.doctorHubAPIKey {
+            config.httpAdditionalHeaders = [
+                "Authorization": "Bearer \(apiKey)",
+                "User-Agent": "BrainSAIT-iOS/1.0"
+            ]
+        }
+
         session = URLSession(configuration: config)
     }
     
@@ -21,10 +40,31 @@ class DoctorHubService: ObservableObject {
     func fetchDoctors(facilityId: String) async throws -> [Doctor] {
         isLoading = true
         defer { isLoading = false }
-        
-        let url = URL(string: "\(doctorHubBaseURL)/doctors?facility_id=\(facilityId)")!
-        let (data, _) = try await session.data(from: url)
-        
+
+        // 🔧 FIX: Use Configuration for base URL
+        let baseURL = Configuration.API.doctorHubBaseURL
+
+        // 🔒 SECURITY: Validate and sanitize facility ID
+        guard !facilityId.isEmpty, facilityId.count < 100 else {
+            throw DoctorHubError.invalidInput("Invalid facility ID")
+        }
+
+        guard let encodedFacilityId = facilityId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/doctors?facility_id=\(encodedFacilityId)") else {
+            throw DoctorHubError.invalidURL
+        }
+
+        // ✅ ENHANCEMENT: Add response validation
+        let (data, response) = try await session.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw DoctorHubError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw DoctorHubError.httpError(statusCode: httpResponse.statusCode)
+        }
+
         doctors = try JSONDecoder().decode([Doctor].self, from: data)
         return doctors
     }
@@ -119,12 +159,21 @@ class DoctorHubService: ObservableObject {
     }
 }
 
+// MARK: - Error Types
+
+/// Comprehensive error handling for DoctorHub operations
 enum DoctorHubError: LocalizedError {
     case bookingFailed
     case cancellationFailed
     case claimSubmissionFailed
     case networkError
-    
+    case invalidURL
+    case invalidResponse
+    case invalidInput(String)
+    case httpError(statusCode: Int)
+    case decodingError(Error)
+    case timeout
+
     var errorDescription: String? {
         switch self {
         case .bookingFailed:
@@ -135,6 +184,73 @@ enum DoctorHubError: LocalizedError {
             return "Failed to submit insurance claim. Please try again."
         case .networkError:
             return "Network error. Please check your connection."
+        case .invalidURL:
+            return "Invalid request URL. Please contact support."
+        case .invalidResponse:
+            return "Invalid server response. Please try again."
+        case .invalidInput(let message):
+            return "Invalid input: \(message)"
+        case .httpError(let statusCode):
+            switch statusCode {
+            case 400:
+                return "Bad request. Please check your input."
+            case 401:
+                return "Authentication required. Please login again."
+            case 403:
+                return "Access denied. Please check your permissions."
+            case 404:
+                return "Resource not found."
+            case 429:
+                return "Too many requests. Please try again later."
+            case 500...599:
+                return "Server error. Please try again later."
+            default:
+                return "Request failed with status code \(statusCode)."
+            }
+        case .decodingError(let error):
+            return "Failed to process server response: \(error.localizedDescription)"
+        case .timeout:
+            return "Request timed out. Please check your connection and try again."
+        }
+    }
+
+    var errorDescriptionArabic: String {
+        switch self {
+        case .bookingFailed:
+            return "فشل حجز الموعد. يرجى المحاولة مرة أخرى."
+        case .cancellationFailed:
+            return "فشل إلغاء الموعد. يرجى الاتصال بالدعم."
+        case .claimSubmissionFailed:
+            return "فشل تقديم المطالبة التأمينية. يرجى المحاولة مرة أخرى."
+        case .networkError:
+            return "خطأ في الشبكة. يرجى التحقق من اتصالك."
+        case .invalidURL:
+            return "عنوان URL غير صالح. يرجى الاتصال بالدعم."
+        case .invalidResponse:
+            return "استجابة الخادم غير صالحة. يرجى المحاولة مرة أخرى."
+        case .invalidInput(let message):
+            return "إدخال غير صالح: \(message)"
+        case .httpError(let statusCode):
+            switch statusCode {
+            case 400:
+                return "طلب غير صحيح. يرجى التحقق من إدخالك."
+            case 401:
+                return "المصادقة مطلوبة. يرجى تسجيل الدخول مرة أخرى."
+            case 403:
+                return "تم رفض الوصول. يرجى التحقق من أذوناتك."
+            case 404:
+                return "لم يتم العثور على المورد."
+            case 429:
+                return "طلبات كثيرة جداً. يرجى المحاولة لاحقاً."
+            case 500...599:
+                return "خطأ في الخادم. يرجى المحاولة لاحقاً."
+            default:
+                return "فشل الطلب مع رمز الحالة \(statusCode)."
+            }
+        case .decodingError:
+            return "فشل معالجة استجابة الخادم."
+        case .timeout:
+            return "انتهت مهلة الطلب. يرجى التحقق من اتصالك والمحاولة مرة أخرى."
         }
     }
 }

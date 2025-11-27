@@ -2,23 +2,40 @@ import Foundation
 import AVFoundation
 import Speech
 
+/// VoiceTriageService manages AI-powered voice triage using CallLinc healthcare AI.
+/// Handles real-time voice recognition, WebSocket communication, and audio playback.
+///
+/// ## Features:
+/// - Real-time Arabic speech recognition
+/// - WebSocket-based AI communication
+/// - Audio response playback
+/// - Conversation history management
+/// - Facility recommendations
+///
+/// ## Usage:
+/// ```swift
+/// let service = VoiceTriageService.shared
+/// await service.connect()
+/// service.sendTextMessage("I have a headache")
+/// ```
 class VoiceTriageService: NSObject, ObservableObject {
     static let shared = VoiceTriageService()
-    
+
     @Published var isConnected = false
     @Published var isRecording = false
     @Published var isMuted = false
     @Published var conversationHistory: [ConversationMessage] = []
     @Published var connectionStatus: ConnectionStatus = .disconnected
     @Published var errorMessage: String?
-    
-    private let callLincBaseURL = "https://calllinc-healthcare-ai-agent-469357002740.us-west1.run.app"
+
     private var audioEngine: AVAudioEngine?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "ar-SA"))
     private var webSocketTask: URLSessionWebSocketTask?
     private var session: URLSession?
+    private var audioPlayer: AVAudioPlayer? // 🔧 FIX: Retain audio player to prevent premature deallocation
+    private var audioPlayerDelegate: AudioPlayerDelegate?
     
     enum ConnectionStatus: String {
         case disconnected = "Disconnected"
@@ -123,12 +140,33 @@ class VoiceTriageService: NSObject, ObservableObject {
         addSystemMessage("Disconnected from CallLinc")
     }
     
+    /// Sets up WebSocket connection with authentication and configuration
     private func setupWebSocket() {
         let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = Configuration.Settings.networkTimeout
+        configuration.timeoutIntervalForResource = Configuration.Settings.networkTimeout * 2
+
         session = URLSession(configuration: configuration, delegate: self, delegateQueue: OperationQueue())
-        
-        guard let url = URL(string: "\(callLincBaseURL)/ws/voice") else { return }
-        webSocketTask = session?.webSocketTask(with: url)
+
+        // Use Configuration for base URL
+        let baseURL = Configuration.API.callLincBaseURL
+        guard let url = URL(string: "\(baseURL)/ws/voice") else {
+            errorMessage = "Invalid WebSocket URL configuration"
+            return
+        }
+
+        var request = URLRequest(url: url)
+
+        // 🔒 SECURITY: Add authentication if API key is available
+        if let apiKey = Configuration.Secrets.callLincAPIKey {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        // Add custom headers
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("BrainSAIT-iOS/1.0", forHTTPHeaderField: "User-Agent")
+
+        webSocketTask = session?.webSocketTask(with: request)
         webSocketTask?.resume()
         receiveMessage()
     }
@@ -290,12 +328,45 @@ class VoiceTriageService: NSObject, ObservableObject {
         }
     }
     
+    /// 🔧 FIXED: Properly managed audio playback with retained player instance
+    /// Plays audio data from AI response
+    /// - Parameter data: Audio data to play
     private func playAudioData(_ data: Data) {
+        // Stop any currently playing audio
+        audioPlayer?.stop()
+
         do {
+            // Create and retain audio player
             let player = try AVAudioPlayer(data: data)
+            player.volume = 1.0
+
+            // Set up delegate for cleanup
+            let delegate = AudioPlayerDelegate { [weak self] in
+                DispatchQueue.main.async {
+                    // Cleanup after playback finishes
+                    self?.audioPlayer = nil
+                    self?.audioPlayerDelegate = nil
+                }
+            }
+            player.delegate = delegate
+
+            // Retain both player and delegate
+            self.audioPlayer = player
+            self.audioPlayerDelegate = delegate
+
+            // Prepare and play
+            player.prepareToPlay()
             player.play()
+
+            if Configuration.Settings.verboseLogging {
+                print("🔊 Playing audio response (\(data.count) bytes)")
+            }
         } catch {
-            print("Failed to play audio: \(error)")
+            let errorMsg = "Failed to play audio: \(error.localizedDescription)"
+            print("❌ \(errorMsg)")
+            DispatchQueue.main.async {
+                self.errorMessage = errorMsg
+            }
         }
     }
     
@@ -392,10 +463,36 @@ struct TriageResponse: Codable {
     let audioURL: URL?
     let citations: [CitationData]?
     let recommendedFacilities: [Facility]?
-    
+
     struct CitationData: Codable {
         let title: String
         let url: String
         let snippet: String?
+    }
+}
+
+// MARK: - Audio Player Delegate
+
+/// Helper class to manage AVAudioPlayer lifecycle and callbacks
+private class AudioPlayerDelegate: NSObject, AVAudioPlayerDelegate {
+    private let onFinish: () -> Void
+
+    init(onFinish: @escaping () -> Void) {
+        self.onFinish = onFinish
+        super.init()
+    }
+
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        if Configuration.Settings.verboseLogging {
+            print("🔊 Audio playback finished (success: \(flag))")
+        }
+        onFinish()
+    }
+
+    func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        if let error = error {
+            print("❌ Audio decode error: \(error.localizedDescription)")
+        }
+        onFinish()
     }
 }
