@@ -77,19 +77,44 @@ dependencies: [
 
 ## 🔐 Epic FHIR Configuration
 
-### **Your Epic App Registration Details**
+### **Configuring Epic Credentials**
 
-Based on your Epic sandbox registration, configure:
+There are multiple ways to configure your Epic FHIR credentials:
 
-```swift
-// In EpicFHIRService.swift, replace:
-private let epicConfig = [
-    "client_id": "YOUR_EPIC_CLIENT_ID",          // ← Your Client ID from Epic
-    "redirect": "brainsait-health://oauth/callback",
-    "scope": "patient/Patient.read patient/Observation.read patient/MedicationRequest.read patient/Condition.read patient/Immunization.read patient/AllergyIntolerance.read launch/patient openid fhirUser",
-    "server_url": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4"
-]
+#### **Option 1: Environment Variables (Recommended for Production)**
+
+Set environment variables before building:
+```bash
+export EPIC_CLIENT_ID="your-client-id-from-epic"
+export EPIC_FHIR_URL="https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4"
 ```
+
+#### **Option 2: Runtime Configuration**
+
+Configure programmatically in your app:
+```swift
+// In your app initialization or settings
+let epicService = EpicFHIRService.shared
+
+// Simple configuration with just client ID
+epicService.configure(clientId: "YOUR_EPIC_CLIENT_ID")
+
+// Or full configuration
+let config = EpicFHIRService.EpicConfiguration(
+    clientId: "YOUR_EPIC_CLIENT_ID",
+    redirectUri: "brainsait-health://oauth/callback",
+    scope: "patient/Patient.read patient/Observation.read ...",
+    serverUrl: "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4"
+)
+epicService.configure(with: config)
+```
+
+#### **Option 3: In-App Configuration**
+
+Users can enter their Epic Client ID through the Health Records view:
+1. Navigate to Health tab
+2. Tap menu (⋯) → Connect Epic
+3. Enter Client ID and tap Configure
 
 ### **Epic Configuration Checklist**
 

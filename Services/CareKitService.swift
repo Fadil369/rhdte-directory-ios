@@ -3,6 +3,8 @@ import CareKit
 import CareKitStore
 import HealthKit
 
+/// CareKitService manages the CareKit store and provides methods for care plan management,
+/// task tracking, contact management, and HealthKit synchronization.
 class CareKitService: ObservableObject {
     static let shared = CareKitService()
     
@@ -11,16 +13,13 @@ class CareKitService: ObservableObject {
     @Published var contacts: [OCKContact] = []
     @Published var carePlans: [OCKCarePlan] = []
     @Published var errorMessage: String?
+    @Published var isInitialized = false
     
-    private let storeManager: OCKSynchronizedStoreManager
-    private var store: OCKStore { storeManager.store }
+    private let store: OCKStore
     
     private init() {
-        // Initialize CareKit store
-        let coordinator = OCKStoreCoordinator()
-        let store = OCKStore(name: "BrainSAIT-CareKit", type: .onDisk(protection: .complete))
-        coordinator.attach(store: store)
-        storeManager = OCKSynchronizedStoreManager(wrapping: coordinator)
+        // Initialize CareKit store with data protection
+        store = OCKStore(name: "BrainSAIT-CareKit", type: .onDisk(protection: .complete))
         
         setupDefaultCarePlan()
     }
@@ -44,18 +43,35 @@ class CareKitService: ObservableObject {
                     // Add default tasks
                     await createDefaultTasks(carePlanID: plan.id)
                 }
+                
+                await MainActor.run {
+                    isInitialized = true
+                }
             } catch {
                 await MainActor.run {
                     errorMessage = "Failed to setup care plan: \(error.localizedDescription)"
+                    isInitialized = true // Still mark as initialized to allow app to continue
                 }
             }
         }
     }
     
     private func createDefaultTasks(carePlanID: String) async {
-        // Medication reminder task
-        var medicationSchedule = OCKSchedule.dailyAtTime(hour: 9, minutes: 0, start: Date(), end: nil, text: "Take medication")
-        medicationSchedule = medicationSchedule.inserting(element: OCKScheduleElement(start: Date(), end: nil, interval: DateComponents(day: 1), text: "Evening dose", targetValues: [], duration: .hours(1)))
+        // Medication reminder task - morning and evening doses
+        let morningSchedule = OCKSchedule.dailyAtTime(
+            hour: 9, minutes: 0, start: Date(), end: nil,
+            text: "Morning dose"
+        )
+        let eveningElement = OCKScheduleElement(
+            start: Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: Date()) ?? Date(),
+            end: nil,
+            interval: DateComponents(day: 1),
+            text: "Evening dose",
+            targetValues: [],
+            duration: .hours(1)
+        )
+        var medicationSchedule = morningSchedule
+        medicationSchedule = medicationSchedule.inserting(element: eveningElement)
         
         let medicationTask = OCKTask(
             id: "medication-task",
@@ -65,7 +81,10 @@ class CareKitService: ObservableObject {
         )
         
         // Blood pressure check task
-        let bpSchedule = OCKSchedule.dailyAtTime(hour: 8, minutes: 0, start: Date(), end: nil, text: "Morning BP check")
+        let bpSchedule = OCKSchedule.dailyAtTime(
+            hour: 8, minutes: 0, start: Date(), end: nil,
+            text: "Morning BP check"
+        )
         let bpTask = OCKTask(
             id: "blood-pressure-task",
             title: "Check Blood Pressure",
@@ -74,7 +93,10 @@ class CareKitService: ObservableObject {
         )
         
         // Exercise task
-        let exerciseSchedule = OCKSchedule.dailyAtTime(hour: 17, minutes: 0, start: Date(), end: nil, text: "30 min exercise")
+        let exerciseSchedule = OCKSchedule.dailyAtTime(
+            hour: 17, minutes: 0, start: Date(), end: nil,
+            text: "30 min exercise"
+        )
         let exerciseTask = OCKTask(
             id: "exercise-task",
             title: "Exercise",
@@ -82,8 +104,12 @@ class CareKitService: ObservableObject {
             schedule: exerciseSchedule
         )
         
-        // Water intake task
-        let waterSchedule = OCKSchedule.dailyAtTime(hour: 8, minutes: 0, start: Date(), end: nil, text: "8 glasses of water", duration: .allDay)
+        // Water intake task - track throughout the day
+        let waterSchedule = OCKSchedule.dailyAtTime(
+            hour: 8, minutes: 0, start: Date(), end: nil,
+            text: "8 glasses of water",
+            duration: .allDay
+        )
         let waterTask = OCKTask(
             id: "water-intake-task",
             title: "Drink Water",
@@ -187,6 +213,7 @@ class CareKitService: ObservableObject {
         return contact
     }
     
+    /// Synchronizes HealthKit data with CareKit outcomes
     func syncWithHealthKit() async throws {
         let healthKitService = HealthKitService.shared
         await healthKitService.fetchLatestHealthData()
@@ -197,25 +224,43 @@ class CareKitService: ObservableObject {
         if let systolic = healthData.bloodPressureSystolic,
            let diastolic = healthData.bloodPressureDiastolic {
             
-            let bpValue = OCKOutcomeValue(
-                systolic,
-                units: "mmHg"
-            )
+            // Find the blood pressure task
+            let taskQuery = OCKTaskQuery(id: "blood-pressure-task")
+            let tasks = try await store.fetchTasks(query: taskQuery)
+            
+            guard let bpTask = tasks.first else {
+                return
+            }
+            
+            let systolicValue = OCKOutcomeValue(systolic, units: "mmHg")
+            var systolicOutcomeValue = systolicValue
+            systolicOutcomeValue.kind = "systolic"
+            
+            let diastolicValue = OCKOutcomeValue(diastolic, units: "mmHg")
+            var diastolicOutcomeValue = diastolicValue
+            diastolicOutcomeValue.kind = "diastolic"
             
             let bpOutcome = OCKOutcome(
-                taskUUID: nil,
+                taskUUID: bpTask.uuid,
                 taskOccurrenceIndex: 0,
-                values: [bpValue]
+                values: [systolicOutcomeValue, diastolicOutcomeValue]
             )
             
-            // Would save to appropriate task
+            try await store.addOutcome(bpOutcome)
+        }
+        
+        // Sync heart rate data if available
+        if let heartRate = healthData.heartRate {
+            // Could create a heart rate tracking task/outcome here
+            print("Heart rate from HealthKit: \(heartRate) bpm")
         }
     }
     
+    /// Calculate adherence rate for a task within a date range
     func getAdherenceRate(for task: OCKTask, in dateRange: DateInterval) async -> Double {
         do {
-            let query = OCKEventQuery(for: dateRange)
-            let events = try await store.fetchEvents(matching: task, query: query)
+            let query = OCKEventQuery(dateInterval: dateRange)
+            let events = try await store.fetchEvents(taskID: task.id, query: query)
             
             let totalEvents = events.count
             guard totalEvents > 0 else { return 0.0 }
@@ -224,8 +269,25 @@ class CareKitService: ObservableObject {
             return Double(completedEvents) / Double(totalEvents)
             
         } catch {
+            print("Failed to calculate adherence: \(error.localizedDescription)")
             return 0.0
         }
+    }
+    
+    /// Fetch all care plans
+    @MainActor
+    func fetchCarePlans() async {
+        do {
+            let query = OCKCarePlanQuery()
+            carePlans = try await store.fetchCarePlans(query: query)
+        } catch {
+            errorMessage = "Failed to fetch care plans: \(error.localizedDescription)"
+        }
+    }
+    
+    /// Get the store for direct access if needed
+    func getStore() -> OCKStore {
+        return store
     }
 }
 
