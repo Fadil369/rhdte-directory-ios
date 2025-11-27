@@ -1,0 +1,43 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+DerivedData/
+*.moved-aside
+*.hmap
+*.ipa
+
+# Build artifacts
+build/
+dist/
+
+# macOS
+.DS_Store
+*.dSYM
+*.dSYM.zip
+*.pkg
+
+# IDE
+.idea/
+*.xcworkspace/xcshareddata/
+*.xcodeproj/xcuserdata/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace/

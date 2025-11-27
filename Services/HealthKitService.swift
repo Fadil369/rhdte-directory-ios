@@ -123,18 +123,21 @@ class HealthKitService: ObservableObject {
         }
     }
     
+    /// Fetch the latest value for a specific quantity type
     private func fetchLatestQuantity(for identifier: HKQuantityTypeIdentifier, unit: HKUnit) async throws -> Double? {
         guard let quantityType = HKObjectType.quantityType(forIdentifier: identifier) else {
             return nil
         }
         
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(sampleType: quantityType, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { _, samples, error in
-            // Query completion
-        }
         
         return try await withCheckedThrowingContinuation { continuation in
-            let actualQuery = HKSampleQuery(sampleType: quantityType, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { _, samples, error in
+            let query = HKSampleQuery(
+                sampleType: quantityType,
+                predicate: nil,
+                limit: 1,
+                sortDescriptors: [sortDescriptor]
+            ) { _, samples, error in
                 if let error = error {
                     continuation.resume(throwing: error)
                     return
@@ -149,7 +152,7 @@ class HealthKitService: ObservableObject {
                 continuation.resume(returning: value)
             }
             
-            healthStore.execute(actualQuery)
+            healthStore.execute(query)
         }
     }
     
