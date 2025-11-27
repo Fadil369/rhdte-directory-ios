@@ -195,6 +195,9 @@ struct FacilityDetailSheet: View {
                                     .cornerRadius(12)
                             }
                         }
+                        
+                        // Phase 2 Features Section
+                        phase2FeaturesSection
                     }
                     .padding()
                 }
@@ -206,6 +209,67 @@ struct FacilityDetailSheet: View {
                         dismiss()
                     }
                 }
+            }
+            .sheet(isPresented: $showHealthVault) {
+                HealthVaultPlaceholderView(facilityName: facility.displayName)
+            }
+        }
+    }
+    
+    // MARK: - Phase 2 Features Section
+    
+    @State private var showHealthVault = false
+    @StateObject private var featureFlags = FeatureFlagsService.shared
+    
+    private var phase2FeaturesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Divider()
+            
+            Text("Health Services")
+                .font(.headline)
+            
+            // Health Vault Entry Point
+            Phase2FeatureButton(
+                icon: "folder.fill.badge.plus",
+                title: "Health Records Vault",
+                subtitle: "Store and access your medical documents",
+                isEnabled: featureFlags.isEnabled(.healthVault),
+                comingSoon: !featureFlags.isEnabled(.healthVault)
+            ) {
+                showHealthVault = true
+            }
+            
+            // Video Consultation Entry Point
+            Phase2FeatureButton(
+                icon: "video.fill",
+                title: "Video Consultation",
+                subtitle: "Connect with doctors virtually",
+                isEnabled: featureFlags.isEnabled(.videoConsultations),
+                comingSoon: !featureFlags.isEnabled(.videoConsultations)
+            ) {
+                // TODO: Navigate to video consultation booking
+            }
+            
+            // Prescription Management Entry Point
+            Phase2FeatureButton(
+                icon: "pills.fill",
+                title: "Prescriptions",
+                subtitle: "View and request prescription refills",
+                isEnabled: featureFlags.isEnabled(.prescriptionManagement),
+                comingSoon: !featureFlags.isEnabled(.prescriptionManagement)
+            ) {
+                // TODO: Navigate to prescriptions
+            }
+            
+            // Lab Results Entry Point
+            Phase2FeatureButton(
+                icon: "chart.bar.doc.horizontal.fill",
+                title: "Lab Results",
+                subtitle: "Access your lab test results",
+                isEnabled: featureFlags.isEnabled(.labResults),
+                comingSoon: !featureFlags.isEnabled(.labResults)
+            ) {
+                // TODO: Navigate to lab results
             }
         }
     }
@@ -328,5 +392,141 @@ struct FlowLayout: Layout {
         }
         
         return (CGSize(width: width, height: currentY + lineHeight), positions)
+    }
+}
+
+// MARK: - Phase 2 Feature Button
+
+struct Phase2FeatureButton: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let isEnabled: Bool
+    let comingSoon: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            if isEnabled {
+                action()
+            }
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(isEnabled ? Color("BrainSAITGreen") : .gray)
+                    .frame(width: 40)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(title)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(isEnabled ? .primary : .secondary)
+                        
+                        if comingSoon {
+                            Text("Coming Soon")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.orange)
+                                .cornerRadius(4)
+                        }
+                    }
+                    
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                if isEnabled {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+    }
+}
+
+// MARK: - Health Vault Placeholder View
+
+struct HealthVaultPlaceholderView: View {
+    let facilityName: String
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Spacer()
+                
+                Image(systemName: "folder.fill.badge.plus")
+                    .font(.system(size: 80))
+                    .foregroundColor(Color("BrainSAITGreen"))
+                
+                Text("Health Records Vault")
+                    .font(.title)
+                    .fontWeight(.bold)
+                
+                Text("Securely store and manage your medical documents from \(facilityName)")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    FeatureListItem(icon: "lock.fill", text: "End-to-end encrypted storage")
+                    FeatureListItem(icon: "doc.fill", text: "Import from files, photos, or share sheet")
+                    FeatureListItem(icon: "magnifyingglass", text: "Search and categorize documents")
+                    FeatureListItem(icon: "square.and.arrow.up", text: "Secure sharing with providers")
+                    FeatureListItem(icon: "icloud.fill", text: "Optional cloud backup")
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                .padding(.horizontal)
+                
+                Spacer()
+                
+                Text("Coming in Version 1.1")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct FeatureListItem: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(Color("BrainSAITGreen"))
+                .frame(width: 24)
+            
+            Text(text)
+                .font(.subheadline)
+            
+            Spacer()
+        }
     }
 }
