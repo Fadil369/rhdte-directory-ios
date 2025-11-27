@@ -252,20 +252,22 @@ struct HealthRecordsView: View {
                 
                 // Additional vitals in a grid
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    if healthKitService.healthData.weight != nil || healthKitService.healthData.height != nil {
+                    // Weight card - only show if weight data is available
+                    if let weight = healthKitService.healthData.weight {
                         VitalCard(
                             title: "Weight",
-                            value: healthKitService.healthData.weight,
+                            value: weight,
                             unit: "kg",
                             icon: "scalemass",
                             color: .purple
                         )
                     }
                     
-                    if healthKitService.healthData.oxygenSaturation != nil {
+                    // SpO₂ - HealthKit stores as decimal (0-1), display as percentage
+                    if let spo2 = healthKitService.healthData.oxygenSaturation {
                         VitalCard(
                             title: "SpO₂",
-                            value: healthKitService.healthData.oxygenSaturation.map { $0 * 100 },
+                            value: spo2 * 100, // Convert from decimal to percentage for display
                             unit: "%",
                             icon: "lungs",
                             color: .cyan

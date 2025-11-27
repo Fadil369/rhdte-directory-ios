@@ -157,7 +157,9 @@ class EpicFHIRService: ObservableObject {
             allergyIntolerances = try await allergiesTask
         } catch {
             // Log errors but don't throw - partial data is still useful
-            print("Some data failed to load: \(error.localizedDescription)")
+            #if DEBUG
+            debugPrint("Some data failed to load: \(error.localizedDescription)")
+            #endif
             errorMessage = "Some data could not be loaded: \(error.localizedDescription)"
         }
     }
@@ -369,9 +371,10 @@ class EpicFHIRService: ObservableObject {
                         unit: .count().unitDivided(by: .minute())
                     )
                 case "2708-6": // Oxygen saturation (LOINC)
+                    // Epic provides SpO2 as percentage (e.g., 98), HealthKit stores as decimal (0-1)
                     try await healthKitService.writeHealthData(
                         type: .oxygenSaturation,
-                        value: doubleValue / 100.0, // Convert percentage to decimal
+                        value: doubleValue / 100.0, // Convert percentage to decimal for HealthKit
                         unit: .percent()
                     )
                 default:
@@ -379,7 +382,9 @@ class EpicFHIRService: ObservableObject {
                 }
             } catch {
                 // Log error but continue with other observations
-                print("Failed to sync observation \(code): \(error.localizedDescription)")
+                #if DEBUG
+                debugPrint("Failed to sync observation \(code): \(error.localizedDescription)")
+                #endif
             }
         }
     }

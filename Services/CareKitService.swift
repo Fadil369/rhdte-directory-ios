@@ -248,19 +248,15 @@ class CareKitService: ObservableObject {
             
             try await store.addOutcome(bpOutcome)
         }
-        
-        // Sync heart rate data if available
-        if let heartRate = healthData.heartRate {
-            // Could create a heart rate tracking task/outcome here
-            print("Heart rate from HealthKit: \(heartRate) bpm")
-        }
     }
     
     /// Calculate adherence rate for a task within a date range
     func getAdherenceRate(for task: OCKTask, in dateRange: DateInterval) async -> Double {
         do {
             let query = OCKEventQuery(dateInterval: dateRange)
-            let events = try await store.fetchEvents(taskID: task.id, query: query)
+            // Note: CareKit 3.x uses fetchEvents(query:) then filters by task
+            let allEvents = try await store.fetchEvents(query: query)
+            let events = allEvents.filter { $0.task.id == task.id }
             
             let totalEvents = events.count
             guard totalEvents > 0 else { return 0.0 }
@@ -269,7 +265,10 @@ class CareKitService: ObservableObject {
             return Double(completedEvents) / Double(totalEvents)
             
         } catch {
-            print("Failed to calculate adherence: \(error.localizedDescription)")
+            // Log error silently in production
+            #if DEBUG
+            debugPrint("Failed to calculate adherence: \(error.localizedDescription)")
+            #endif
             return 0.0
         }
     }
