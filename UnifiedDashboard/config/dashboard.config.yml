@@ -1,0 +1,383 @@
+# BrainSAIT Unified Dashboard Configuration
+# Complete configuration for all payment channels, agents, and services
+
+version: "1.0.0"
+
+# ============================================================================
+# GENERAL SETTINGS
+# ============================================================================
+app:
+  name: "BrainSAIT Unified Dashboard"
+  oid: "1.3.6.1.4.1.61026"
+  environment: development  # development | staging | production
+  timezone: "Asia/Riyadh"
+  locale: "ar-SA"
+  
+server:
+  host: "0.0.0.0"
+  port: 8080
+  workers: 4
+  reload: true  # Auto-reload on code changes (dev only)
+
+# ============================================================================
+# PAYMENT CHANNELS CONFIGURATION
+# ============================================================================
+payment_channels:
+  
+  # PayLinc - Saudi Digital Payment Platform
+  paylinc:
+    enabled: true
+    base_url: "https://api.paylinc.sa/v1"
+    websocket_url: "wss://ws.paylinc.sa"
+    api_key: "${PAYLINC_API_KEY}"
+    modules:
+      wallet: true
+      healthcare: true
+      bnpl_murabaha: true
+      cross_border: true
+      qr_payments: true
+    shariah_compliance: true
+    sama_regulated: true
+  
+  # Stripe International
+  stripe:
+    enabled: true
+    api_key: "${STRIPE_SECRET_KEY}"
+    publishable_key: "${STRIPE_PUBLISHABLE_KEY}"
+    webhook_secret: "${STRIPE_WEBHOOK_SECRET}"
+    payment_methods:
+      - card
+      - apple_pay
+      - google_pay
+    currencies:
+      - SAR
+      - USD
+      - EUR
+      - GBP
+  
+  # PayPal Global
+  paypal:
+    enabled: true
+    mode: sandbox  # sandbox | live
+    client_id: "${PAYPAL_CLIENT_ID}"
+    client_secret: "${PAYPAL_CLIENT_SECRET}"
+    payment_methods:
+      - paypal
+      - venmo
+  
+  # SARIE (Saudi Instant Payment)
+  sarie:
+    enabled: true
+    api_endpoint: "${SARIE_API_ENDPOINT}"
+    api_token: "${SARIE_API_TOKEN}"
+    transaction_limit: 20000  # SAR
+    settlement_time: "instant"  # < 10 seconds
+  
+  # Mada (Saudi Domestic Cards)
+  mada:
+    enabled: true
+    api_key: "${MADA_API_KEY}"
+    network: "domestic"
+  
+  # NPHIES (Healthcare Claims)
+  nphies:
+    enabled: true
+    api_endpoint: "${NPHIES_API_ENDPOINT}"
+    api_key: "${NPHIES_API_KEY}"
+    payer_license: "${NPHIES_PAYER_LICENSE}"
+    fhir_version: "R4"
+
+# ============================================================================
+# LINC AGENTS CONFIGURATION
+# ============================================================================
+agents:
+  
+  # Core Orchestration
+  masterlinc:
+    enabled: true
+    port: 8000
+    category: security
+    subdomain: "master.brainsait.io"
+    health_check_interval: 30  # seconds
+  
+  # Security & Identity
+  authlinc:
+    enabled: true
+    port: 8001
+    category: security
+    features:
+      - oauth2
+      - jwt
+      - rbac
+      - mfa
+  
+  oidlinc:
+    enabled: true
+    port: 8050
+    category: security
+    oid_registry: "1.3.6.1.4.1.61026"
+  
+  # Healthcare Agents
+  doctorlinc:
+    enabled: true
+    port: 8010
+    category: healthcare
+    features:
+      - clinical_decision_support
+      - soap_notes
+      - fhir_integration
+      - nphies_integration
+      - voice_to_text
+  
+  nurslinc:
+    enabled: true
+    port: 8011
+    category: healthcare
+    features:
+      - care_plans
+      - medication_scheduling
+      - vitals_monitoring
+  
+  patientlinc:
+    enabled: true
+    port: 8012
+    category: healthcare
+    features:
+      - health_records
+      - appointment_scheduling
+      - medication_reminders
+      - arabic_support
+  
+  careteamlinc:
+    enabled: true
+    port: 8013
+    category: healthcare
+    features:
+      - care_coordination
+      - provider_communication
+      - remote_monitoring
+  
+  # Business Agents
+  bizlinc:
+    enabled: true
+    port: 8020
+    category: business
+    features:
+      - saudi_etimad_integration
+      - rfp_generation
+      - market_analysis
+  
+  paylinc_agent:
+    enabled: true
+    port: 8021
+    category: business
+    features:
+      - payment_processing
+      - invoicing
+      - financial_reporting
+  
+  insightlinc:
+    enabled: true
+    port: 8022
+    category: business
+    features:
+      - business_intelligence
+      - dashboards
+      - analytics
+  
+  # Automation Agents
+  devlinc:
+    enabled: true
+    port: 8030
+    category: automation
+    features:
+      - docker_management
+      - kubernetes_orchestration
+      - cloudflare_tunnels
+  
+  autolinc:
+    enabled: true
+    port: 8031
+    category: automation
+    features:
+      - n8n_integration
+      - workflow_orchestration
+      - apple_shortcuts
+  
+  codelinc:
+    enabled: true
+    port: 8032
+    category: automation
+    features:
+      - code_generation
+      - code_review
+      - documentation
+  
+  # Content Agents
+  medialinc:
+    enabled: true
+    port: 8040
+    category: content
+    features:
+      - video_processing
+      - audio_dubbing
+      - subtitle_generation
+  
+  edulinc:
+    enabled: true
+    port: 8041
+    category: content
+    features:
+      - lms_integration
+      - course_creation
+      - assessment_tools
+  
+  chatlinc:
+    enabled: true
+    port: 8042
+    category: content
+    features:
+      - multilingual_chat
+      - whatsapp_integration
+      - customer_service
+
+# ============================================================================
+# WORKFLOW & TASK MANAGEMENT
+# ============================================================================
+workflows:
+  orchestration_engine: "n8n"
+  task_queue: "celery"
+  
+  presets:
+    patient_registration:
+      steps:
+        - eligibility_check
+        - kyc_verification
+        - record_creation
+        - notification
+      agents: [patientlinc, authlinc, chatlinc]
+    
+    healthcare_payment:
+      steps:
+        - nphies_eligibility
+        - claim_submission
+        - patient_copay
+        - provider_settlement
+      agents: [doctorlinc, paylinc_agent, nphies]
+    
+    murabaha_bnpl:
+      steps:
+        - credit_check
+        - shariah_validation
+        - agreement_creation
+        - merchant_payment
+      agents: [paylinc_agent, authlinc]
+
+# ============================================================================
+# MONITORING & OBSERVABILITY
+# ============================================================================
+monitoring:
+  metrics:
+    enabled: true
+    interval: 60  # seconds
+    retention_days: 90
+  
+  logging:
+    level: INFO  # DEBUG | INFO | WARNING | ERROR
+    format: json
+    destinations:
+      - console
+      - file
+      - cloudflare_logs
+  
+  alerts:
+    enabled: true
+    channels:
+      - email
+      - slack
+      - pagerduty
+    conditions:
+      - agent_down
+      - payment_failure_rate > 5%
+      - api_latency > 1000ms
+
+# ============================================================================
+# DATABASE & STORAGE
+# ============================================================================
+database:
+  type: sqlite  # sqlite | postgresql
+  path: "dashboard.db"
+  backup:
+    enabled: true
+    interval: "daily"
+    retention_days: 30
+
+storage:
+  type: "local"  # local | s3 | r2
+  path: "./data"
+
+# ============================================================================
+# SECURITY & COMPLIANCE
+# ============================================================================
+security:
+  encryption:
+    at_rest: true
+    algorithm: "AES-256-GCM"
+  
+  authentication:
+    method: "jwt"
+    token_expiry: 3600  # seconds
+    refresh_enabled: true
+  
+  compliance:
+    hipaa: true
+    saudi_pdpl: true
+    pci_dss: true
+    sama_regulations: true
+
+# ============================================================================
+# REAL-TIME UPDATES
+# ============================================================================
+realtime:
+  websockets:
+    enabled: true
+    path: "/ws/dashboard"
+    heartbeat_interval: 30
+  
+  server_sent_events:
+    enabled: true
+    path: "/api/v1/stream/dashboard"
+
+# ============================================================================
+# SAUDI ARABIA SPECIFIC SETTINGS
+# ============================================================================
+saudi_settings:
+  language:
+    primary: "ar"
+    secondary: "en"
+    rtl_support: true
+  
+  calendar:
+    hijri_support: true
+    gregorian_support: true
+  
+  payment_methods:
+    mada_priority: true
+    sarie_preferred: true
+  
+  healthcare:
+    nphies_mandatory: true
+    moh_compliance: true
+
+# ============================================================================
+# DEVELOPMENT & TESTING
+# ============================================================================
+development:
+  mock_data: true
+  cors_allow_all: true
+  debug_mode: true
+
+testing:
+  enabled: true
+  coverage_threshold: 80
+  integration_tests: true
