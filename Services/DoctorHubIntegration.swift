@@ -1,0 +1,249 @@
+import Foundation
+
+class DoctorHubService: ObservableObject {
+    static let shared = DoctorHubService()
+    
+    @Published var appointments: [Appointment] = []
+    @Published var doctors: [Doctor] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let doctorHubBaseURL = "https://brainsait-doctor-hub--fadil369.github.app/api"
+    private let session: URLSession
+    
+    private init() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        session = URLSession(configuration: config)
+    }
+    
+    @MainActor
+    func fetchDoctors(facilityId: String) async throws -> [Doctor] {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let url = URL(string: "\(doctorHubBaseURL)/doctors?facility_id=\(facilityId)")!
+        let (data, _) = try await session.data(from: url)
+        
+        doctors = try JSONDecoder().decode([Doctor].self, from: data)
+        return doctors
+    }
+    
+    @MainActor
+    func fetchAvailableSlots(doctorId: String, date: Date) async throws -> [TimeSlot] {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let dateFormatter = ISO8601DateFormatter()
+        let dateString = dateFormatter.string(from: date)
+        
+        let url = URL(string: "\(doctorHubBaseURL)/availability?doctor_id=\(doctorId)&date=\(dateString)")!
+        let (data, _) = try await session.data(from: url)
+        
+        return try JSONDecoder().decode([TimeSlot].self, from: data)
+    }
+    
+    @MainActor
+    func bookAppointment(_ request: AppointmentRequest) async throws -> Appointment {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let url = URL(string: "\(doctorHubBaseURL)/appointments")!
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = try JSONEncoder().encode(request)
+        
+        let (data, response) = try await session.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw DoctorHubError.bookingFailed
+        }
+        
+        let appointment = try JSONDecoder().decode(Appointment.self, from: data)
+        appointments.append(appointment)
+        return appointment
+    }
+    
+    @MainActor
+    func fetchAppointments(patientId: String) async throws -> [Appointment] {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let url = URL(string: "\(doctorHubBaseURL)/appointments?patient_id=\(patientId)")!
+        let (data, _) = try await session.data(from: url)
+        
+        appointments = try JSONDecoder().decode([Appointment].self, from: data)
+        return appointments
+    }
+    
+    @MainActor
+    func cancelAppointment(appointmentId: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let url = URL(string: "\(doctorHubBaseURL)/appointments/\(appointmentId)/cancel")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        let (_, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw DoctorHubError.cancellationFailed
+        }
+        
+        appointments.removeAll { $0.id == appointmentId }
+    }
+    
+    @MainActor
+    func submitInsuranceClaim(_ claim: InsuranceClaim) async throws -> ClaimResponse {
+        isLoading = true
+        defer { isLoading = false }
+        
+        let url = URL(string: "\(doctorHubBaseURL)/insurance/claims")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(claim)
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw DoctorHubError.claimSubmissionFailed
+        }
+        
+        return try JSONDecoder().decode(ClaimResponse.self, from: data)
+    }
+}
+
+enum DoctorHubError: LocalizedError {
+    case bookingFailed
+    case cancellationFailed
+    case claimSubmissionFailed
+    case networkError
+    
+    var errorDescription: String? {
+        switch self {
+        case .bookingFailed:
+            return "Failed to book appointment. Please try again."
+        case .cancellationFailed:
+            return "Failed to cancel appointment. Please contact support."
+        case .claimSubmissionFailed:
+            return "Failed to submit insurance claim. Please try again."
+        case .networkError:
+            return "Network error. Please check your connection."
+        }
+    }
+}
+
+struct Doctor: Identifiable, Codable {
+    let id: String
+    let nameEn: String
+    let nameAr: String
+    let specialty: String
+    let facilityId: String
+    let rating: Double?
+    let yearsOfExperience: Int
+    let languages: [String]
+    let photo: String?
+    let bio: String?
+    let consultationFee: Double?
+    let acceptsInsurance: Bool
+    let availableDays: [String]
+    
+    var displayName: String {
+        Locale.current.language.languageCode?.identifier == "ar" ? nameAr : nameEn
+    }
+}
+
+struct TimeSlot: Identifiable, Codable {
+    let id: String
+    let startTime: Date
+    let endTime: Date
+    let isAvailable: Bool
+    let consultationType: ConsultationType
+    
+    enum ConsultationType: String, Codable {
+        case inPerson = "in_person"
+        case video = "video"
+        case phone = "phone"
+    }
+}
+
+struct AppointmentRequest: Codable {
+    let doctorId: String
+    let facilityId: String
+    let patientId: String
+    let patientName: String
+    let patientPhone: String
+    let patientEmail: String?
+    let timeSlotId: String
+    let appointmentDate: Date
+    let consultationType: TimeSlot.ConsultationType
+    let reason: String
+    let insuranceProvider: String?
+    let insurancePolicyNumber: String?
+    let notes: String?
+}
+
+struct Appointment: Identifiable, Codable {
+    let id: String
+    let doctorId: String
+    let doctorName: String
+    let facilityId: String
+    let facilityName: String
+    let patientId: String
+    let patientName: String
+    let appointmentDate: Date
+    let startTime: Date
+    let endTime: Date
+    let consultationType: TimeSlot.ConsultationType
+    let status: AppointmentStatus
+    let reason: String
+    let notes: String?
+    let confirmationCode: String
+    
+    enum AppointmentStatus: String, Codable {
+        case scheduled
+        case confirmed
+        case inProgress = "in_progress"
+        case completed
+        case cancelled
+        case noShow = "no_show"
+    }
+}
+
+struct InsuranceClaim: Codable {
+    let patientId: String
+    let appointmentId: String
+    let insuranceProvider: String
+    let policyNumber: String
+    let claimAmount: Double
+    let services: [ServiceItem]
+    let supportingDocuments: [String]
+    
+    struct ServiceItem: Codable {
+        let code: String
+        let description: String
+        let amount: Double
+    }
+}
+
+struct ClaimResponse: Codable {
+    let claimId: String
+    let status: ClaimStatus
+    let approvedAmount: Double?
+    let message: String
+    let estimatedProcessingDays: Int
+    
+    enum ClaimStatus: String, Codable {
+        case submitted
+        case underReview = "under_review"
+        case approved
+        case partiallyApproved = "partially_approved"
+        case rejected
+    }
+}
